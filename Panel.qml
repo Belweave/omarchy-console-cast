@@ -198,20 +198,22 @@ Panel {
                 anchors.verticalCenter: parent.verticalCenter
                 textFormat: Text.PlainText
                 text: modelData.value
-                color: panelRoot.foreground
+                color: modelData.copy ? panelRoot.foreground : panelRoot.dim
                 font.family: panelRoot.fontFamily
-                font.pixelSize: Style.font.title
+                font.pixelSize: modelData.copy ? Style.font.title : Style.font.body
               }
 
+              // Only this computer's own address and 0.0.0.0 can be copied (Model.dnsRows).
               PanelActionButton {
                 id: copyButton
+                visible: modelData.copy === true
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 iconText: String.fromCodePoint(0xF018F)
                 tooltipText: "Copy"
                 foreground: panelRoot.foreground
                 fontFamily: panelRoot.fontFamily
-                onClicked: panelRoot.service.copy(modelData.value)
+                onClicked: if (modelData.copy === true) panelRoot.service.copy(modelData.value)
               }
             }
           }

@@ -46,9 +46,12 @@ omarchy bar move belweave.console-cast --section right
 The plugin runs inside the Omarchy shell with your user's rights. It:
 
 - asks Console Cast on this computer for its state (`http://127.0.0.1:7777`, every 5 seconds while Console Cast runs, every 2 seconds while the panel is open, every 15 seconds while it is off);
-- runs `consolecast version --json` to see whether Console Cast is installed, and `consolecast license status` while the panel is open and Console Cast is off;
+- runs `consolecast version --json` to see whether Console Cast is installed, and `consolecast license status` while the panel is open and Console Cast is off. Only this command decides that Console Cast is installed: while it is missing, the panel shows nothing that answers on the port;
+- reads this computer's own addresses from the kernel while the panel is open, as Omarchy's network status does: `ip -j -4 addr show` and `ip -j route get 1.1.1.1` (this asks the routing table and sends nothing);
 - starts `console-cast --background` (or `consolecast up` when the app is already open) when you press Start, and `console-cast` when you press Open Console Cast;
 - copies an address with `wl-copy` when you press copy.
+
+The Primary DNS the panel shows is always one of this computer's own addresses: the one Console Cast reports when it is one of them (a computer on several networks), otherwise the address of this computer's default route. Any other address is never shown or copied; without an address of this computer the panel says "Not available". Nothing Console Cast's port sends is run, opened or copied.
 
 It never asks for administrator rights, never reads or stores stream keys or license keys, and never starts a broadcast or a destination.
 

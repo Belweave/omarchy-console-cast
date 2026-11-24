@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "belweave.console-cast",
   "name": "Console Cast",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Belweave",
   "license": "Apache-2.0",
   "description": "Console Cast in the Omarchy bar: its state at a glance, the console's DNS addresses, Start and Stop, destinations and licence status.",

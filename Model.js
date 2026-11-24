@@ -61,11 +61,59 @@ function onAir(state, destinations) {
   return false
 }
 
-// The two DNS addresses the console needs: this computer's address and 0.0.0.0.
-function dnsRows(status) {
-  var ip = status && typeof status.lan_ip === "string" ? status.lan_ip : ""
-  if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) return []
-  return [{ label: "Primary DNS", value: ip }, { label: "Secondary DNS", value: "0.0.0.0" }]
+function isIPv4(text) {
+  var m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(String(text || ""))
+  if (!m) return false
+  for (var i = 1; i <= 4; i++) if (Number(m[i]) > 255 || (m[i].length > 1 && m[i][0] === "0")) return false
+  return true
+}
+
+// This computer's own IPv4 addresses, from the kernel: `ip -j -4 addr show` (iproute2). Only
+// addresses with global scope (not loopback, not link-local) on an interface that is up.
+function localAddresses(text) {
+  var links = parse(text)
+  var out = []
+  if (!Array.isArray(links)) return out
+  for (var i = 0; i < links.length; i++) {
+    var link = links[i] || {}
+    var flags = Array.isArray(link.flags) ? link.flags : []
+    if (flags.indexOf("UP") < 0 || flags.indexOf("LOOPBACK") >= 0) continue
+    var infos = Array.isArray(link.addr_info) ? link.addr_info : []
+    for (var j = 0; j < infos.length; j++) {
+      var a = infos[j] || {}
+      if (a.family === "inet" && a.scope === "global" && isIPv4(a.local) && out.indexOf(a.local) < 0) out.push(a.local)
+    }
+  }
+  return out
+}
+
+// The address this computer uses for its default route, from the kernel: `ip -j route get
+// 1.1.1.1` (asks the routing table, sends nothing), as stock Omarchy's network status does.
+function routeSource(text) {
+  var routes = parse(text)
+  var src = Array.isArray(routes) && routes[0] ? routes[0].prefsrc : ""
+  return isIPv4(src) ? src : ""
+}
+
+// The address to give the console: one of this computer's own addresses, never anything else.
+// Console Cast's reported lan_ip only chooses among them (a computer with several networks);
+// otherwise the kernel's default-route address; "" when the kernel reports neither.
+function consoleAddress(status, local, route) {
+  var own = Array.isArray(local) ? local : []
+  var reported = status && typeof status.lan_ip === "string" ? status.lan_ip : ""
+  if (reported !== "" && own.indexOf(reported) >= 0) return reported
+  var viaRoute = isIPv4(route) ? route : ""
+  if (viaRoute !== "" && own.indexOf(viaRoute) >= 0) return viaRoute
+  return ""
+}
+
+// The two DNS addresses the console needs: this computer's address and 0.0.0.0. Only these
+// two values can ever be copied; without an address of this computer, one row says so.
+function dnsRows(status, local, route) {
+  if (!status) return []
+  var ip = consoleAddress(status, local, route || "")
+  if (ip === "") return [{ label: "Primary DNS", value: "Not available", copy: false }]
+  return [{ label: "Primary DNS", value: ip, copy: true }, { label: "Secondary DNS", value: "0.0.0.0", copy: true }]
 }
 
 // Destinations from GET /relay ({"destinations": [...]}) or `consolecast output list` (an
